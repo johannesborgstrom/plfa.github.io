@@ -285,8 +285,8 @@ hold, then `m ≤ p` holds.  Again, `m`, `n`, and `p` are implicit:
   → n ≤ p
     -----
   → m ≤ p
-≤-trans z≤n       _          =  z≤n
-≤-trans (s≤s m≤n) (s≤s n≤p)  =  s≤s (≤-trans m≤n n≤p)
+≤-trans z≤n n≤p = z≤n
+≤-trans (s≤s m≤n) (s≤s n≤p) = s≤s (≤-trans m≤n n≤p)
 ```
 Here the proof is by induction on the _evidence_ that `m ≤ n`.  In the
 base case, the first inequality holds by `z≤n` and must show `zero ≤ p`,
@@ -339,8 +339,8 @@ antisymmetric: for all naturals `m` and `n`, if both `m ≤ n` and
   → n ≤ m
     -----
   → m ≡ n
-≤-antisym z≤n       z≤n        =  refl
-≤-antisym (s≤s m≤n) (s≤s n≤m)  =  cong suc (≤-antisym m≤n n≤m)
+≤-antisym z≤n z≤n = refl
+≤-antisym (s≤s mlen) (s≤s nlem) = cong suc (≤-antisym mlen nlem)
 ```
 Again, the proof is by induction over the evidence that `m ≤ n`
 and `n ≤ m` hold.
@@ -601,6 +601,9 @@ exercise exploits the relation between < and ≤.)
 
 ```agda
 -- Your code goes here
+<-trans : ∀{m n p : ℕ} → m < n → n < p → m < p
+<-trans z<s (s<s n<p) = z<s
+<-trans (s<s m<n) (s<s n<p) = s<s (<-trans m<n n<p)
 ```
 
 #### Exercise `trichotomy` (practice) {#trichotomy}
@@ -619,6 +622,31 @@ similar to that used for totality.
 
 ```agda
 -- Your code goes here
+
+data Trichotomy (m n : ℕ) : Set where
+  less :
+      m < n
+      -------------
+    → Trichotomy m n
+
+  greater :
+      n < m
+      -------------
+    → Trichotomy m n
+
+  equal :
+      m ≡ n
+      -------------
+    → Trichotomy m n
+
+trichotomy : ∀ (m n : ℕ) → Trichotomy m n
+trichotomy zero zero = equal refl
+trichotomy zero (suc n) = less z<s
+trichotomy (suc m) zero = greater z<s
+trichotomy (suc m) (suc n) with trichotomy m n 
+...  | equal m≡n = equal (cong suc m≡n)
+...  | less m<n = less (s<s m<n)
+...  | greater m>n = greater (s<s m>n)
 ```
 
 #### Exercise `+-mono-<` (practice) {#plus-mono-less}
@@ -628,6 +656,21 @@ As with inequality, some additional definitions may be required.
 
 ```agda
 -- Your code goes here
++-monoʳ-< : ∀ (n p q : ℕ) → p < q → n + p < n + q
++-monoʳ-< zero p q p<q = p<q
++-monoʳ-< (suc n) p q p<q = s<s (+-monoʳ-< n p q p<q)
+
++-monoˡ-< : ∀ (m n p : ℕ) → m < n → m + p < n + p
++-monoˡ-< m n p m<n rewrite +-comm m p | +-comm n p = +-monoʳ-< p m n m<n
+
+
++-mono-< : ∀ (m n p q : ℕ)
+  → m < n
+  → p < q
+    -------------
+  → m + p < n + q
++-mono-< m n p q m<n p<q =
+  <-trans (+-monoˡ-< m n p m<n) (+-monoʳ-< n p q p<q)
 ```
 
 #### Exercise `≤→<, <→≤` (recommended) {#leq-iff-less}
@@ -636,6 +679,17 @@ Show that `suc m ≤ n` implies `m < n`, and conversely.
 
 ```agda
 -- Your code goes here
+≤→< : ∀ {m n : ℕ} → suc m ≤ n → m < n
+≤→< {zero } (s≤s z≤n) = z<s
+≤→< {suc _} (s≤s sucm≤n) = s<s (≤→< sucm≤n)
+
+<→≤ : ∀ {m n : ℕ} → m < n → suc m ≤ n
+<→≤ z<s = s≤s z≤n
+<→≤ (s<s m<n) = s≤s (<→≤ m<n)
+
+<→≤' : ∀ {m n : ℕ} → m < n → m ≤ n
+<→≤' z<s = z≤n 
+<→≤' (s<s m≤n) = s≤s (<→≤' m≤n)
 ```
 
 #### Exercise `<-trans-revisited` (practice) {#less-trans-revisited}
@@ -646,6 +700,8 @@ the fact that inequality is transitive.
 
 ```agda
 -- Your code goes here
+<-trans-revisited : ∀{m n p : ℕ} → m < n → n < p → m < p
+<-trans-revisited m<n n<p = ≤→< (≤-trans (<→≤ m<n) (<→≤' n<p))
 ```
 
 

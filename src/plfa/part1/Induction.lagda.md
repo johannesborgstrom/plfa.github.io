@@ -336,7 +336,7 @@ proof of associativity.
     suc (0 + n) + p
   ≡⟨⟩
     suc ((0 + n) + p)
-  ≡⟨ cong suc (+-assoc-0 n p) ⟩
+  ≡⟨⟩
     suc (0 + (n + p))
   ≡⟨⟩
     1 + (n + p)
@@ -729,7 +729,7 @@ equations:
 ```agda
 +-assoc′ : ∀ (m n p : ℕ) → (m + n) + p ≡ m + (n + p)
 +-assoc′ zero    n p                          =  refl
-+-assoc′ (suc m) n p  rewrite +-assoc′ m n p  =  refl
++-assoc′ (suc m) n p rewrite +-assoc′ m n p   =  refl
 ```
 
 For the base case, we must show:
@@ -791,8 +791,12 @@ It is instructive to see how to build the alternative proof of
 associativity using the interactive features of Agda in Emacs.
 Begin by typing:
 
-    +-assoc′ : ∀ (m n p : ℕ) → (m + n) + p ≡ m + (n + p)
-    +-assoc′ m n p = ?
+```agda
++-assoc′′ : ∀ (m n p : ℕ) → (m + n) + p ≡ m + (n + p)
++-assoc′′ zero n p = refl
++-assoc′′ (suc m) n p
+  rewrite +-assoc′′ m n p = refl
+```
 
 The question mark indicates that you would like Agda to help with
 filling in that part of the code.  If you type `C-c C-l` (control-c
@@ -891,6 +895,16 @@ is associative and commutative.
 
 ```agda
 -- Your code goes here
++-swap : ∀ (m n p : ℕ) → m + (n + p) ≡ n + (m + p)
++-swap m n p = begin
+    m + (n + p)
+  ≡⟨ sym (+-assoc m n p) ⟩ 
+    m + n + p
+  ≡⟨ cong (_+ p) (+-comm m n) ⟩
+    n + m + p
+  ≡⟨ +-assoc n m p ⟩ 
+    n + (m + p)
+  ∎
 ```
 
 
@@ -904,6 +918,22 @@ for all naturals `m`, `n`, and `p`.
 
 ```agda
 -- Your code goes here
+*-distrib-+ : ∀(m n p : ℕ) → (m + n) * p ≡ m * p + n * p
+*-distrib-+ zero n p    = refl
+*-distrib-+ (suc m) n p =
+  begin 
+    (suc(m) + n) * p 
+  ≡⟨⟩ 
+    (suc(m + n)) * p 
+  ≡⟨⟩ 
+    p + (m + n) * p 
+  ≡⟨ cong (p +_) (*-distrib-+ m n p) ⟩
+    p + ((m * p) + (n * p))
+  ≡⟨ sym (+-assoc p (m * p) (n * p)) ⟩ 
+    (p + (m * p)) + (n * p)
+  ≡⟨⟩ 
+    suc(m) * p + n * p 
+  ∎
 ```
 
 
@@ -917,6 +947,20 @@ for all naturals `m`, `n`, and `p`.
 
 ```agda
 -- Your code goes here
+*-assoc : ∀ (m n p : ℕ) → (m * n) * p ≡ m * (n * p)
+*-assoc zero n p = refl
+*-assoc (suc m) n p = 
+  begin
+    ((suc m) * n) * p 
+  ≡⟨⟩
+    (n + m * n) * p 
+  ≡⟨ *-distrib-+ n (m * n) p ⟩
+    n * p + m * n * p
+  ≡⟨ cong (n * p +_) ( *-assoc m n p) ⟩
+    n * p + m * (n * p)
+  ≡⟨⟩
+    (suc m) * (n * p)
+  ∎
 ```
 
 
@@ -931,6 +975,74 @@ you will need to formulate and prove suitable lemmas.
 
 ```agda
 -- Your code goes here
+*-identity-r : ∀(m : ℕ) → m * 1 ≡ m
+*-identity-r zero = refl
+*-identity-r (suc m) =
+  begin
+    (suc m) * 1 
+  ≡⟨⟩
+    1 + m * 1 
+  ≡⟨ cong (1 +_) (*-identity-r m) ⟩
+    1 + m
+  ≡⟨⟩
+    suc(m)
+  ∎
+
+*-annihilator-r : ∀(m : ℕ) → m * zero ≡ zero
+*-annihilator-r zero = refl
+*-annihilator-r (suc m) =
+  begin
+    (suc m) * 0 
+  ≡⟨⟩
+    0 + m * 0 
+  ≡⟨ cong (0 +_) (*-annihilator-r m) ⟩
+    0 + 0
+  ≡⟨⟩
+    0
+  ∎
+
+*-suc : ∀ (m n : ℕ) → m * suc n ≡ m + m * n 
+*-suc zero n    = refl
+*-suc (suc m) n =
+  begin
+    (suc m) * (suc n)
+  ≡⟨⟩
+    (suc n) + m * (suc n)
+  ≡⟨ cong (suc n +_) (*-suc m n) ⟩
+    (suc n) + (m + m * n)
+  ≡⟨ sym (+-assoc (suc n) m (m * n) ) ⟩
+    (suc n) + m + m * n
+  ≡⟨⟩
+    (suc (n + m)) + m * n
+  ≡⟨ cong (λ s → suc(s) + m * n)  (+-comm n m) ⟩
+    (suc (m + n)) + m * n
+  ≡⟨⟩
+    ((suc m) + n) + m * n
+  ≡⟨ cong suc (+-assoc m n (m * n)) ⟩
+    (suc m) + (n + m * n)
+  ≡⟨⟩
+    (suc m) + (suc m) * n 
+  ∎
+
+*-comm : ∀ (m n : ℕ) → m * n ≡ n * m
+*-comm m zero =
+  begin
+    m * zero
+  ≡⟨ *-annihilator-r m ⟩
+    zero
+  ≡⟨⟩
+    zero * m
+  ∎
+*-comm m (suc n) =
+  begin
+    m * suc n
+  ≡⟨ *-suc m n ⟩
+     m + m * n
+  ≡⟨ cong (m +_ ) (*-comm m n) ⟩
+     m + n * m
+  ≡⟨⟩
+    (suc n) * m
+  ∎
 ```
 
 
@@ -944,6 +1056,9 @@ for all naturals `n`. Did your proof require induction?
 
 ```agda
 -- Your code goes here
+zero-monus : ∀ (n : ℕ) → zero ∸ n ≡ zero
+zero-monus zero = refl
+zero-monus (suc n) = refl
 ```
 
 
@@ -957,6 +1072,28 @@ for all naturals `m`, `n`, and `p`.
 
 ```agda
 -- Your code goes here
+∸-+-assoc : ∀ (m n p : ℕ) → m ∸ n ∸ p ≡ m ∸ (n + p)
+∸-+-assoc m zero p = refl
+∸-+-assoc zero (suc n) p =
+  begin
+    zero ∸ (suc n) ∸ p
+  ≡⟨⟩
+    zero ∸ p
+  ≡⟨ zero-monus p ⟩
+    zero
+  ≡⟨ zero-monus ((suc n) + p) ⟩
+    zero ∸ ((suc n) + p)
+  ∎
+∸-+-assoc (suc m) (suc n) p =
+  begin
+    (suc m) ∸ (suc n) ∸ p
+  ≡⟨⟩
+    m ∸ n ∸ p
+  ≡⟨ ∸-+-assoc m n p ⟩
+    m ∸ (n + p)
+  ≡⟨⟩
+    (suc m) ∸ ((suc n) + p)
+  ∎
 ```
 
 

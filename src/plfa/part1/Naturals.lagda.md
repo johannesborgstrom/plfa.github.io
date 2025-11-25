@@ -78,7 +78,7 @@ Write out `7` in longhand. The suggestion below loads but is, of course, incorre
 
 ```agda
 seven : ℕ
-seven = zero
+seven = suc (suc (suc (suc (suc (suc (suc (zero)))))))
 ```
 
 Type `C-c C-l` in Emacs to instruct Agda to re-load.
@@ -439,6 +439,20 @@ Compute `3 + 4`, writing out your reasoning as a chain of equations, using the e
 
 ```agda
 -- Your code goes here
+_ : 3 + 4 ≡ 7
+_ = begin
+    3 + 4
+  ≡⟨⟩
+    suc(suc(suc(0))) + 4
+  ≡⟨⟩
+    suc(suc(suc(0)) + 4)
+  ≡⟨⟩
+    suc(suc(suc(0) + 4))
+  ≡⟨⟩
+    suc(suc(suc(0 + 4)))
+  ≡⟨⟩
+    7
+  ∎
 ```
 
 
@@ -501,6 +515,20 @@ Compute `3 * 4`, writing out your reasoning as a chain of equations, using the e
 
 ```agda
 -- Your code goes here
+_ =
+  begin
+    3 * 4
+  ≡⟨⟩    -- inductive case
+    4 + (2 * 4)
+  ≡⟨⟩    -- inductive case
+    4 + (4 + (1 * 4))
+  ≡⟨⟩    -- inductive case
+    4 + (4 + (4 + (0 * 4)))
+  ≡⟨⟩    -- base case
+    4 + (4 + (4 + 0))
+  ≡⟨⟩    -- simplification
+    12
+  ∎
 ```
 
 
@@ -515,6 +543,30 @@ Check that `3 ^ 4` is `81`.
 
 ```agda
 -- Your code goes here
+_^_ : ℕ → ℕ → ℕ
+m ^ zero = 1
+m ^ suc n = m * m ^ n
+
+
+_ =
+  begin
+    3 ^ 4
+  ≡⟨⟩ 
+    3 * (3 ^ 3)
+  ≡⟨⟩ 
+    3 * (3 * (3 ^ 2))
+  ≡⟨⟩ 
+    3 * (3 * (3 * (3 ^ 1)))
+  ≡⟨⟩ 
+    3 * (3 * (3 * (3 * (3 ^ 0))))
+  ≡⟨⟩ 
+    3 * (3 * (3 * (3 * 1)))
+  ≡⟨⟩ 
+    81
+  ∎
+
+_ : 3 ^ 4 ≡ 81
+_ = refl
 ```
 
 
@@ -557,7 +609,7 @@ _ =
   ≡⟨⟩
     1 ∸ 0
   ≡⟨⟩
-    1
+    1 
   ∎
 ```
 We did not use the second equation at all, but it will be required
@@ -598,6 +650,20 @@ Compute `5 ∸ 3` and `3 ∸ 5`, writing out your reasoning as a chain of equati
 
 ```agda
 -- Your code goes here
+_ =
+  begin
+    5 ∸ 3
+  ≡⟨⟩
+    suc(4) ∸ suc(2)
+  ≡⟨⟩
+    suc(3) ∸ suc(1)
+  ≡⟨⟩
+    suc(2) ∸ suc(0)
+  ≡⟨⟩
+    2 ∸ zero
+  ≡⟨⟩
+    2
+  ∎
 ```
 
 
@@ -616,6 +682,7 @@ needs to be declared:
 ```agda
 infixl 6  _+_  _∸_
 infixl 7  _*_
+infixr 8  _^_
 ```
 This states operators `_+_` and `_∸_` have precedence level 6,
 and operator `_*_` has precedence level 7.
@@ -949,6 +1016,55 @@ Confirm that these both give the correct answer for zero through four.
 
 ```agda
 -- Your code goes here
+inc : Bin → Bin
+inc ⟨⟩ =  ⟨⟩ I
+inc (n O) = n I
+inc (n I) = (inc n) O
+
+_ : inc (⟨⟩ I O I I) ≡ ⟨⟩ I I O O
+_ = refl
+_ : inc (⟨⟩ O) ≡ ⟨⟩ I
+_ = refl
+_ : inc (⟨⟩ I O) ≡ ⟨⟩ I I
+_ = refl
+_ : inc (⟨⟩ I I) ≡ ⟨⟩ I O O
+_ = refl
+_ : inc (⟨⟩ I O O ) ≡ ⟨⟩ I O I
+_ = refl
+
+
+to   : ℕ → Bin
+to zero = ⟨⟩ O
+to (suc n) = inc (to n)
+
+from : Bin → ℕ
+from ⟨⟩ = zero
+from (n O) = 2 * (from n)
+from (n I) = suc (2 * (from n))
+
+_ : to 12 ≡ ⟨⟩ I I O O
+_ = refl
+_ : to 1 ≡ ⟨⟩ I
+_ = refl
+_ : to 3 ≡ ⟨⟩ I I
+_ = refl
+_ : to 4 ≡ ⟨⟩ I O O
+_ = refl
+_ : to 5 ≡ ⟨⟩ I O I
+_ = refl
+
+_ : from (⟨⟩ I O I I) ≡ 11
+_ = refl
+_ : from (⟨⟩ O) ≡ 0
+_ = refl
+_ : from (⟨⟩ I O) ≡ 2 
+_ = refl
+_ : from (⟨⟩ I I) ≡ 3
+_ = refl
+_ : from (⟨⟩ I O O ) ≡ 4
+_ = refl
+
+
 ```
 
 
