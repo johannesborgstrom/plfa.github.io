@@ -17,10 +17,13 @@ examples of polymorphic types and higher-order functions.
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; sym; trans; cong)
 open Eq.≡-Reasoning
+open import Data.Unit using (⊤; tt)
+open import Data.Irrelevant using (pure)
+open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Bool using (Bool; true; false; T; _∧_; _∨_; not)
 open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_; _≤_; s≤s; z≤n)
 open import Data.Nat.Properties using
-  (+-assoc; +-identityˡ; +-identityʳ; *-assoc; *-identityˡ; *-identityʳ; *-distribʳ-+)
+  (+-assoc; +-identityˡ; +-identityʳ; *-assoc; *-identityˡ; *-identityʳ; *-distribʳ-+; +-suc; *-suc)
 open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Data.Product using (_×_; ∃; ∃-syntax) renaming (_,_ to ⟨_,_⟩)
 open import Function using (_∘_)
@@ -356,6 +359,10 @@ reverse of the second appended to the reverse of the first:
 
 ```agda
 -- Your code goes here
+reverse-++-distrib : ∀ {A : Set} → ∀ (xs ys : List A) → reverse (xs ++ ys) ≡ reverse ys ++ reverse xs
+reverse-++-distrib [] ys = sym (++-identityʳ (reverse ys))
+reverse-++-distrib (x ∷ xs) ys rewrite sym (++-assoc (reverse ys) (reverse xs) [ x ]) =
+    cong (_++ [ x ]) (reverse-++-distrib xs ys)
 ```
 
 
@@ -368,6 +375,16 @@ as the identity function.  Show that reverse is an involution:
 
 ```agda
 -- Your code goes here
+reverse-involutive : ∀ {A : Set} → ∀ (xs : List A) → reverse (reverse xs) ≡ xs
+reverse-involutive [] = refl
+reverse-involutive (x ∷ xs) = 
+    begin
+  reverse (reverse xs ++ [ x ])
+    ≡⟨ reverse-++-distrib (reverse xs) ([ x ]) ⟩
+  x ∷ reverse (reverse xs)
+    ≡⟨ cong ( x ∷_ ) (reverse-involutive xs) ⟩
+  x ∷ xs
+    ∎
 ```
 
 
@@ -548,6 +565,9 @@ Prove the following relationship between map and append:
 
 ```agda
 -- Your code goes here
+map-distrib-++ : ∀ {A B : Set} → (f : A → B) → ∀ (xs ys : List A) → map f (xs ++ ys) ≡ map f xs ++ map f ys
+map-distrib-++ f [] ys = refl
+map-distrib-++ f (x ∷ xs) ys = cong (f x ∷_) (map-distrib-++ f xs ys)
 ```
 
 #### Exercise `map-Tree` (practice)
@@ -565,6 +585,9 @@ Define a suitable map operator over trees:
 
 ```agda
 -- Your code goes here
+map-Tree : ∀ {A B C D : Set} → (A → C) → (B → D) → Tree A B → Tree C D
+map-Tree f _ (leaf b) = leaf (f b)
+map-Tree f g (node l a r) = node (map-Tree f g l) (g a) (map-Tree f g r)
 ```
 
 ## Fold {#Fold}
@@ -647,19 +670,25 @@ For example:
 
 ```agda
 -- Your code goes here
+product : List ℕ → ℕ
+product = foldr _*_ 1
+
+_ : product [ 1 , 2 , 3 , 4 ] ≡ 24
+_ = refl
 ```
 
 #### Exercise `foldr-++` (recommended)
 
 Show that fold and append are related as follows:
 ```agda
-postulate
-  foldr-++ : ∀ {A B : Set} (_⊗_ : A → B → B) (e : B) (xs ys : List A) →
+foldr-++ : ∀ {A B : Set} (_⊗_ : A → B → B) (e : B) (xs ys : List A) →
     foldr _⊗_ e (xs ++ ys) ≡ foldr _⊗_ (foldr _⊗_ e ys) xs
 ```
 
 ```agda
 -- Your code goes here
+foldr-++ comb e [] ys = refl
+foldr-++ comb e (x ∷ xs) ys = cong (comb x) (foldr-++ comb e xs ys) 
 ```
 
 #### Exercise `foldr-∷` (practice)
@@ -675,6 +704,20 @@ Show as a consequence of `foldr-++` above that
 
 ```agda
 -- Your code goes here
+foldr-identity : ∀ { A : Set } → (xs : List A) → foldr _∷_ [] xs ≡ xs
+foldr-identity [] = refl
+foldr-identity (x ∷ xs) = cong ( x ∷_ ) (foldr-identity xs)
+
+++-is-foldr : ∀ { A : Set } → (xs ys : List A) →  xs ++ ys ≡ foldr _∷_ ys xs
+++-is-foldr xs ys = begin
+    xs ++ ys
+  ≡⟨ sym (foldr-identity (xs ++ ys)) ⟩
+    foldr _∷_ [] (xs ++ ys)
+  ≡⟨ foldr-++  _∷_ [] xs ys ⟩
+    foldr _∷_ (foldr _∷_ [] ys) xs
+  ≡⟨ cong (λ zs → foldr _∷_ zs xs) (foldr-identity ys) ⟩
+    foldr _∷_ (ys) xs
+  ∎
 ```
 
 #### Exercise `map-is-foldr` (practice)
@@ -728,6 +771,35 @@ equal to `n * (n ∸ 1) / 2`:
 
 ```agda
 -- Your code goes here
+*2-is-double : (n : ℕ) → n * 2 ≡ n + n
+*2-is-double zero = refl
+*2-is-double (suc n) = begin
+  suc (suc (n * 2))
+    ≡⟨ cong suc (cong suc (*2-is-double n)) ⟩
+  suc (suc (n + n))
+    ≡⟨ cong suc (sym (+-suc n n)) ⟩
+  suc (n + suc n)
+    ∎
+
+triangle : (n : ℕ) → sum (downFrom n) * 2 ≡ n * (n ∸ 1)
+triangle zero = refl
+triangle (suc zero) = refl
+triangle (suc (suc n)) = begin
+     (suc n + sum (downFrom (suc n))) * 2 
+   ≡⟨ *-distribʳ-+ 2 (suc n) (sum (downFrom (suc n))) ⟩
+     ((suc n) * 2) + (sum (downFrom (suc n)) * 2) 
+   ≡⟨ cong ((suc n) * 2 +_) (triangle (suc n)) ⟩
+     suc n * 2 + suc n * n
+   ≡⟨ cong ( _+ suc n * n) (*2-is-double (suc n))  ⟩
+     suc n + suc n + suc n * n
+   ≡⟨ cong suc (+-assoc n (suc n) ( suc n * n)) ⟩
+     suc n + (suc n + suc n * n)
+   ≡⟨ cong (λ m → suc n + (suc (n + m))) (sym  (*-suc n n)) ⟩
+     suc n + suc n * suc n
+   ≡⟨⟩
+     suc (suc n) * suc n 
+   ∎
+     
 ```
 
 ## Monoids
