@@ -13,11 +13,14 @@ This chapter introduces universal and existential quantification.
 
 ```agda
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl)
-open import Data.Nat using (ℕ; zero; suc; _+_; _*_)
+open Eq using (_≡_; refl; cong; trans)
+open import Data.Nat using (ℕ; zero; suc; _+_; _*_ ; _≤_)
+open import Data.Nat.Properties using (+-identityʳ; +-suc)
 open import Relation.Nullary using (¬_)
 open import Data.Product using (_×_; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
+open import Data.Empty using (⊥)
+open import Data.Unit using (⊤; tt)
 open import plfa.part1.Isomorphism using (_≃_; extensionality; ∀-extensionality)
 open import Function using (_∘_)
 ```
@@ -90,9 +93,14 @@ dependent product is ambiguous.
 
 Show that universals distribute over conjunction:
 ```agda
-postulate
-  ∀-distrib-× : ∀ {A : Set} {B C : A → Set} →
+∀-distrib-× : ∀ {A : Set} {B C : A → Set} →
     (∀ (x : A) → B x × C x) ≃ (∀ (x : A) → B x) × (∀ (x : A) → C x)
+∀-distrib-× ._≃_.to f .proj₁ a = f a .proj₁
+∀-distrib-× ._≃_.to f .proj₂ a = f a . proj₂
+∀-distrib-× ._≃_.from p a .proj₁ = p .proj₁ a
+∀-distrib-× ._≃_.from p a .proj₂ = p .proj₂ a
+∀-distrib-× ._≃_.from∘to x = refl
+∀-distrib-× ._≃_.to∘from ⟨ fst , snd ⟩ = refl
 ```
 Compare this with the result (`→-distrib-×`) in
 Chapter [Connectives](/Connectives/).
@@ -101,9 +109,15 @@ Chapter [Connectives](/Connectives/).
 
 Show that a disjunction of universals implies a universal of disjunctions:
 ```agda
+⊎∀-implies-∀⊎ : ∀ {A : Set} {B C : A → Set} →
+    (∀ (x : A) → B x) ⊎ (∀ (x : A) → C x) → ∀ (y : A) → B y ⊎ C y
+⊎∀-implies-∀⊎ (inj₁ tob) a = inj₁ (tob a)
+⊎∀-implies-∀⊎ (inj₂ toc) a = inj₂ (toc a)
+
 postulate
-  ⊎∀-implies-∀⊎ : ∀ {A : Set} {B C : A → Set} →
-    (∀ (x : A) → B x) ⊎ (∀ (x : A) → C x) → ∀ (x : A) → B x ⊎ C x
+   ∀⊎-¬implies-⊎∀ : ¬(∀ {A : Set} {B C : A → Set} → ∀ (x : A) → B x ⊎ C x →
+    (∀ (y : A) → B y) ⊎ (∀ (y : A) → C y))
+-- ∀⊎-¬implies-⊎∀ f = f {⊤} {λ _ → ⊤ } {λ _ → ⊥ } tt (inj₁ tt) .inj₂ tt
 ```
 Does the converse hold? If so, prove; if not, explain why.
 
@@ -116,6 +130,16 @@ data Tri : Set where
   aa : Tri
   bb : Tri
   cc : Tri
+
+∀-× : ∀ {B : Tri → Set} → (∀ (x : Tri) → B x) ≃ B aa × B bb × B cc
+∀-× ._≃_.to b .proj₁ = b aa
+∀-× ._≃_.to b .proj₂ .proj₁ = b bb
+∀-× ._≃_.to b .proj₂ .proj₂ = b cc
+∀-× ._≃_.from x aa = x .proj₁
+∀-× ._≃_.from x bb = x .proj₂ .proj₁
+∀-× ._≃_.from x cc = x .proj₂ .proj₂
+∀-× ._≃_.from∘to _ = ∀-extensionality λ { aa → refl ; bb → refl ; cc → refl }
+∀-× ._≃_.to∘from ⟨ _ , ⟨ _ , _ ⟩ ⟩ = refl
 ```
 Let `B` be a type indexed by `Tri`, that is `B : Tri → Set`.
 Show that `∀ (x : Tri) → B x` is isomorphic to `B aa × B bb × B cc`.
@@ -265,18 +289,41 @@ establish the isomorphism is identical to what we wrote when discussing
 
 Show that existentials distribute over disjunction:
 ```agda
-postulate
-  ∃-distrib-⊎ : ∀ {A : Set} {B C : A → Set} →
+∃-distrib-⊎ : ∀ {A : Set} {B C : A → Set} →
     ∃[ x ] (B x ⊎ C x) ≃ (∃[ x ] B x) ⊎ (∃[ x ] C x)
+∃-distrib-⊎ ._≃_.to ⟨ x , inj₁ b ⟩ = inj₁ ⟨ x , b ⟩
+∃-distrib-⊎ ._≃_.to ⟨ x , inj₂ c ⟩ = inj₂ ⟨ x , c ⟩
+∃-distrib-⊎ ._≃_.from (inj₁ ⟨ x , b ⟩) = ⟨ x , inj₁ b ⟩ 
+∃-distrib-⊎ ._≃_.from (inj₂ ⟨ x , c ⟩) = ⟨ x , inj₂ c ⟩
+∃-distrib-⊎ ._≃_.from∘to ⟨ _ , inj₁ _ ⟩ = refl
+∃-distrib-⊎ ._≃_.from∘to ⟨ _ , inj₂ _ ⟩ = refl
+∃-distrib-⊎ ._≃_.to∘from (inj₁ ⟨ _ , _ ⟩) = refl
+∃-distrib-⊎ ._≃_.to∘from (inj₂ ⟨ _ , _ ⟩) = refl
 ```
 
 #### Exercise `∃×-implies-×∃` (practice)
 
 Show that an existential of conjunctions implies a conjunction of existentials:
 ```agda
-postulate
-  ∃×-implies-×∃ : ∀ {A : Set} {B C : A → Set} →
+∃×-implies-×∃ : ∀ {A : Set} {B C : A → Set} →
     ∃[ x ] (B x × C x) → (∃[ x ] B x) × (∃[ x ] C x)
+∃×-implies-×∃ ⟨ x , ⟨ bx , cx ⟩ ⟩ = ⟨ ⟨ x , bx ⟩ , ⟨ x , cx ⟩ ⟩
+
+
+
+∃-⊎ : ∀ {B : Tri → Set} → ∃[ x ] B x ≃ B aa ⊎ B bb ⊎ B cc
+∃-⊎ ._≃_.to ⟨ aa , bx ⟩ = inj₁ bx
+∃-⊎ ._≃_.to ⟨ bb , bx ⟩ = inj₂ (inj₁ bx)
+∃-⊎ ._≃_.to ⟨ cc , bx ⟩ = inj₂ (inj₂ bx)
+∃-⊎ ._≃_.from (inj₁ a) = ⟨ aa , a ⟩
+∃-⊎ ._≃_.from (inj₂ (inj₁ b)) = ⟨ bb , b ⟩
+∃-⊎ ._≃_.from (inj₂ (inj₂ c)) = ⟨ cc , c ⟩
+∃-⊎ ._≃_.from∘to ⟨ aa , _ ⟩ = refl
+∃-⊎ ._≃_.from∘to ⟨ bb , _ ⟩ = refl
+∃-⊎ ._≃_.from∘to ⟨ cc , _ ⟩ = refl
+∃-⊎ ._≃_.to∘from (inj₁ _) = refl
+∃-⊎ ._≃_.to∘from (inj₂ (inj₁ _)) = refl
+∃-⊎ ._≃_.to∘from (inj₂ (inj₂ _)) = refl
 ```
 Does the converse hold? If so, prove; if not, explain why.
 
@@ -335,7 +382,15 @@ even-∃ (even-suc o) with odd-∃ o
 
 odd-∃  (odd-suc e)  with even-∃ e
 ...                    | ⟨ m , refl ⟩  =  ⟨ m , refl ⟩
+
+evenOrOdd : ∀ {n : ℕ} → even n ⊎ odd n
+evenOrOdd {zero} = inj₁ even-zero
+evenOrOdd {suc n} with evenOrOdd {n}
+... | inj₁ x = inj₂ (odd-suc x)
+... | inj₂ y = inj₁ (even-suc y)
 ```
+
+
 We define two mutually recursive functions. Given
 evidence that `n` is even or odd, we return a
 number `m` and evidence that `m * 2 ≡ n` or `1 + m * 2 ≡ n`.
@@ -404,6 +459,10 @@ Show that `y ≤ z` holds if and only if there exists a `x` such that
 
 ```agda
 -- Your code goes here
+∃-+-≤ : ∀ { y z : ℕ } → y ≤ z → ∃[ x ] ( x + y ≡ z)
+∃-+-≤ {zero} {n} _≤_.z≤n = ⟨ n , +-identityʳ n ⟩
+∃-+-≤ {suc m} {n} (_≤_.s≤s x) with ∃-+-≤ x
+... | ⟨ a , adiff ⟩ = ⟨ a , trans (+-suc a m) (cong suc adiff) ⟩
 ```
 
 
@@ -445,11 +504,12 @@ The two inverse proofs are straightforward.
 
 Show that existential of a negation implies negation of a universal:
 ```agda
-postulate
-  ∃¬-implies-¬∀ : ∀ {A : Set} {B : A → Set}
+∃¬-implies-¬∀ : ∀ {A : Set} {B : A → Set}
     → ∃[ x ] (¬ B x)
       --------------
     → ¬ (∀ x → B x)
+∃¬-implies-¬∀ ⟨ x , ¬Bx ⟩ f = ¬Bx (f x)
+
 ```
 Does the converse hold? If so, prove; if not, explain why.
 

@@ -19,7 +19,7 @@ open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Data.Product using (_×_; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩)
 open import Relation.Nullary.Negation using (contradiction)
-open import plfa.part1.Isomorphism using (_≃_; extensionality)
+open import plfa.part1.Isomorphism using (_≃_; _≲_; extensionality)
 ```
 
 
@@ -192,6 +192,21 @@ is irreflexive, that is, `n < n` holds for no `n`.
 
 ```agda
 -- Your code goes here
+infix 4 _<_
+
+data _<_ : ℕ → ℕ → Set where
+
+  z<s : ∀ {n : ℕ}
+      ------------
+    → zero < suc n
+
+  s<s : ∀ {m n : ℕ}
+    → m < n
+      -------------
+    → suc m < suc n
+
+<-irreflexive : ∀ {n} → n < n → ⊥
+<-irreflexive (s<s n<n) = <-irreflexive n<n
 ```
 
 
@@ -210,6 +225,8 @@ but that when one holds the negation of the other two must also hold.
 
 ```agda
 -- Your code goes here
+<-asymmetric : ∀ { m n : ℕ } → m < n → ¬ n < m
+<-asymmetric (s<s m<n) (s<s n<m) = <-asymmetric m<n n<m
 ```
 
 #### Exercise `⊎-dual-×` (recommended)
@@ -223,6 +240,12 @@ This result is an easy consequence of something we've proved previously.
 
 ```agda
 -- Your code goes here
+¬-distrib-⊎ : ∀ { A B : Set } →  ¬ (A ⊎ B) ≃ (¬ A) × (¬ B)
+¬-distrib-⊎ ._≃_.to f = ⟨ (λ a → f (inj₁ a)) , (λ b → f (inj₂ b)) ⟩
+¬-distrib-⊎ ._≃_.from ⟨ ¬a , _ ⟩ (inj₁ a) = ¬a a
+¬-distrib-⊎ ._≃_.from ⟨ _ , ¬b ⟩ (inj₂ b) = ¬b b
+¬-distrib-⊎ ._≃_.from∘to x = refl
+¬-distrib-⊎ ._≃_.to∘from ⟨ fst , snd ⟩ = refl
 ```
 
 
@@ -233,6 +256,11 @@ Do we also have the following?
 If so, prove; if not, can you give a relation weaker than
 isomorphism that relates the two sides?
 
+```agda
+¬-distrib-× : ∀ { A B : Set } →  (¬ A) ⊎ (¬ B) → ¬ (A × B)
+¬-distrib-× (inj₁ ¬a) ⟨ a , _ ⟩ = ¬a a
+¬-distrib-× (inj₂ ¬b) ⟨ _ , b ⟩ = ¬b b
+```
 
 ## Intuitive and Classical logic
 
@@ -290,7 +318,8 @@ meaning that the negation of its negation is provable (and hence that
 its negation is never provable):
 ```agda
 em-irrefutable : ∀ {A : Set} → ¬ ¬ (A ⊎ ¬ A)
-em-irrefutable = λ k → k (inj₂ (λ x → k (inj₁ x)))
+em-irrefutable k = k (inj₂ λ a → k (inj₁ a))
+-- em-irrefutable = λ k → k (inj₂ (λ x → k (inj₁ x)))
 ```
 The best way to explain this code is to develop it interactively:
 
@@ -380,6 +409,29 @@ Show that each of these implies all the others.
 
 ```agda
 -- Your code goes here
+exNihilo : ∀ {A : Set} → ⊥ → A
+exNihilo ()
+
+dne : ∀ { A : Set } → ¬ ¬ A → A
+dne {A} f with em {A}
+... | (inj₁ a)  = a
+... | (inj₂ ¬a) = exNihilo (f ¬a)
+
+impl-⊎ : ∀ { A B : Set } → (A → B) → ¬ A ⊎ B
+impl-⊎ {A} f with em {A}
+... | inj₁ a = inj₂ (f a)
+... | inj₂ ¬a = inj₁ ¬a
+
+peirce : ∀ { A B : Set } → (( A → B ) → A) → A
+peirce {A} aba with em {A}
+... | inj₁ a = a
+... | inj₂ ¬a = aba λ a → exNihilo (¬a a)
+
+deMorgan : ∀ { A B : Set } → ¬ (¬ A × ¬ B) → A ⊎ B
+deMorgan {A} {B} f with ⟨ em {A} , em {B} ⟩
+... | ⟨ inj₁ a , _ ⟩ = inj₁ a
+... | ⟨ _ , inj₁ b ⟩ = inj₂ b
+... | ⟨ inj₂ ¬a , inj₂ ¬b ⟩ = exNihilo (f ⟨ ¬a , ¬b ⟩)
 ```
 
 
@@ -395,6 +447,16 @@ of two stable formulas is stable.
 
 ```agda
 -- Your code goes here
+stable-¬ : ∀ {A : Set} → Stable (¬ A)
+stable-¬ tnA = λ a → tnA λ ¬a → ¬a a
+
+stable-× : ∀ {A B : Set} → Stable A → Stable B → Stable ( A × B )
+stable-× {A} {B} sa sb dn× = ⟨ a , b ⟩
+    where
+    a : A
+    a = sa λ ¬a → dn× λ ab → ¬a (ab .proj₁)
+    b : B
+    b = sb λ ¬b → dn× λ ab → ¬b (ab .proj₂)
 ```
 
 ## Standard library

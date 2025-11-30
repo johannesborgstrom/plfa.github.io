@@ -809,6 +809,13 @@ Show that the sum of two odd numbers is even.
 
 ```agda
 -- Your code goes here
+o+o≡e : ∀ {m n : ℕ}
+  → odd m
+  → odd n
+    ------------
+  → even (m + n)
+
+o+o≡e {suc x} {suc y} (suc ex) (suc ey) rewrite (Data.Nat.Properties.+-suc x y) = suc (suc (e+e≡e ex ey))
 ```
 
 #### Exercise `Bin-predicates` (stretch) {#Bin-predicates}
@@ -869,6 +876,72 @@ properties of `One`. It may also help to prove the following:
 
 ```agda
 -- Your code goes here
+data Bin : Set where
+  ⟨⟩ : Bin
+  _O : Bin → Bin
+  _I : Bin → Bin
+
+data One : Bin → Set where
+  leading : One (⟨⟩ I)
+  trailingO : ∀ {b : Bin}  → (One b) → One (b O)
+  trailingI : ∀ {b : Bin}  → (One b) → One (b I)
+  
+data Can : Bin → Set where
+  canZero : Can (⟨⟩ O)
+  canOne : ∀ {b : Bin}  → (One b) → Can b
+
+inc : Bin → Bin
+inc ⟨⟩ = ⟨⟩ I
+inc (b O) = b I
+inc (b I) = (inc b) O
+
+
+to   : ℕ → Bin
+to zero = ⟨⟩ O
+to (suc n) = inc (to n)
+
+from : Bin → ℕ
+from ⟨⟩ = 0
+from (b O) = 2 * from b
+from (b I) = suc (2 * from b)
+
+oneinc : ∀{b : Bin} →
+    One b →
+    ------------
+    One (inc b)
+oneinc leading = trailingO leading
+oneinc (trailingO o) = trailingI o
+oneinc (trailingI o) = trailingO (oneinc o)
+
+caninc : ∀{b : Bin} →
+    Can b →
+    ------------
+    Can (inc b)
+caninc canZero = canOne leading
+caninc (canOne x) = canOne (oneinc x)
+
+canto : ∀ {n : ℕ} → Can (to n)
+canto {zero} = canZero
+canto {suc n} = caninc (canto {n})
+
+1≤from-One : ∀{b : Bin} →
+    One b →
+    ----------
+    1 ≤ from b
+1≤from-One leading = s≤s z≤n
+1≤from-One {b O} (trailingO o) rewrite +-identityʳ (from b) = +-mono-≤ 0 (from b) 1 (from b) z≤n  (1≤from-One o)
+1≤from-One {b I} (trailingI o) rewrite +-identityʳ (from b) = +-mono-≤ 0 (suc(from b)) 1 (from b) z≤n  (1≤from-One o) 
+
+open Eq.≡-Reasoning using (begin_; step-≡-∣; step-≡-⟩; _∎)
+
+
+0-absorb-* : ∀ (n : ℕ) → 0 ≡ 0 * n
+0-absorb-* zero = refl
+0-absorb-* (suc n) = 0-absorb-* n 
+
+1-unit-* : ∀ (n : ℕ) → n ≡ 1 * n
+1-unit-* zero = refl
+1-unit-* (suc n) = cong suc (1-unit-* n)
 ```
 
 ## Standard library

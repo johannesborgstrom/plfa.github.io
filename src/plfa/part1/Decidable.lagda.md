@@ -20,9 +20,9 @@ of a new notion of _decidable_.
 
 ```agda
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl)
+open Eq using (_≡_; refl; cong)
 open Eq.≡-Reasoning
-open import Data.Nat using (ℕ; zero; suc)
+open import Data.Nat using (ℕ; zero; suc; _+_; _*_)
 open import Data.Product using (_×_) renaming (_,_ to ⟨_,_⟩)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Relation.Nullary.Negation using (¬_)
@@ -291,8 +291,18 @@ trouble normalising evidence of negation.)
 
 Analogous to the function above, define a function to decide strict inequality:
 ```agda
-postulate
-  _<?_ : ∀ (m n : ℕ) → Dec (m < n)
+¬n<z : ∀ {n} → ¬ (n < zero)
+¬n<z ()
+
+¬s<s : ∀ {n m} → ¬ (n < m) → ¬ (suc n < suc m)
+¬s<s ¬e (s<s e) = ¬e e
+
+_<?_ : ∀ (m n : ℕ) → Dec (m < n)
+_ <? zero = no ¬n<z
+zero <? suc n = yes z<s
+suc m <? suc n with m <? n
+... | yes x = yes (s<s x)
+... | no x = no (¬s<s x)
 ```
 
 ```agda
@@ -303,12 +313,21 @@ postulate
 
 Define a function to decide whether two naturals are equal:
 ```agda
-postulate
-  _≡ℕ?_ : ∀ (m n : ℕ) → Dec (m ≡ n)
+_≡ℕ?_ : ∀ (m n : ℕ) → Dec (m ≡ n)
 ```
 
 ```agda
 -- Your code goes here
+pred : ℕ → ℕ
+pred zero = zero
+pred (suc n) = n
+
+zero ≡ℕ? zero = yes refl
+zero ≡ℕ? suc n = no λ ()
+suc m ≡ℕ? zero = no λ ()
+suc m ≡ℕ? suc n with m ≡ℕ? n
+... | yes x = yes (cong suc x)
+... | no x = no λ{es → x (cong pred es)}
 ```
 
 
@@ -535,10 +554,22 @@ on which matches; but either is equally valid.
 
 Show that erasure relates corresponding boolean and decidable operations:
 ```agda
-postulate
-  ∧-× : ∀ {A B : Set} (x : Dec A) (y : Dec B) → ⌊ x ⌋ ∧ ⌊ y ⌋ ≡ ⌊ x ×-dec y ⌋
-  ∨-⊎ : ∀ {A B : Set} (x : Dec A) (y : Dec B) → ⌊ x ⌋ ∨ ⌊ y ⌋ ≡ ⌊ x ⊎-dec y ⌋
-  not-¬ : ∀ {A : Set} (x : Dec A) → not ⌊ x ⌋ ≡ ⌊ ¬? x ⌋
+∧-× : ∀ {A B : Set} (x : Dec A) (y : Dec B) → ⌊ x ⌋ ∧ ⌊ y ⌋ ≡ ⌊ x ×-dec y ⌋
+∧-× (yes x) (yes y) = refl
+∧-× (yes x) (no y) = refl
+∧-× (no x) (yes y) = refl
+∧-× (no x) (no y) = refl
+
+∨-⊎ : ∀ {A B : Set} (x : Dec A) (y : Dec B) → ⌊ x ⌋ ∨ ⌊ y ⌋ ≡ ⌊ x ⊎-dec y ⌋
+∨-⊎ (yes x) (yes y) = refl
+∨-⊎ (no x) (yes y) = refl
+∨-⊎ (yes x) (no y) = refl
+∨-⊎ (no x) (no y) = refl
+
+not-¬ : ∀ {A : Set} (x : Dec A) → not ⌊ x ⌋ ≡ ⌊ ¬? x ⌋
+not-¬ (yes x) = refl
+not-¬ (no x) = refl
+
 ```
 
 #### Exercise `iff-erasure` (recommended)
@@ -547,10 +578,26 @@ Give analogues of the `_⇔_` operation from
 Chapter [Isomorphism](/Isomorphism/#iff),
 operation on booleans and decidables, and also show the corresponding erasure:
 ```agda
-postulate
-  _iff_ : Bool → Bool → Bool
-  _⇔-dec_ : ∀ {A B : Set} → Dec A → Dec B → Dec (A ⇔ B)
-  iff-⇔ : ∀ {A B : Set} (x : Dec A) (y : Dec B) → ⌊ x ⌋ iff ⌊ y ⌋ ≡ ⌊ x ⇔-dec y ⌋
+exFalso : ∀{A : Set} → ⊥ → A
+exFalso ()
+
+_iff_ : Bool → Bool → Bool
+true iff true = true
+true iff false = false
+false iff true = false
+false iff false = true
+
+_⇔-dec_ : ∀ {A B : Set} → Dec A → Dec B → Dec (A ⇔ B)
+yes x ⇔-dec yes y = yes (record { to = λ z → y ; from = λ z → x })
+yes x ⇔-dec no y = no λ z → y (z ._⇔_.to x)
+no x ⇔-dec yes y = no λ z → x (z ._⇔_.from y)
+no x ⇔-dec no y = yes (record { to = λ {z →  exFalso (x z)} ; from = λ z → exFalso (y z) })
+
+iff-⇔ : ∀ {A B : Set} (x : Dec A) (y : Dec B) → ⌊ x ⌋ iff ⌊ y ⌋ ≡ ⌊ x ⇔-dec y ⌋
+iff-⇔ (yes x) (yes y) = refl
+iff-⇔ (yes x) (no y) = refl
+iff-⇔ (no x) (yes y) = refl
+iff-⇔ (no x) (no y) = refl
 ```
 
 ```agda
@@ -631,6 +678,20 @@ Give analogues of `True`, `toWitness`, and `fromWitness` which work
 with *negated* properties. Call these `False`, `toWitnessFalse`, and
 `fromWitnessFalse`.
 
+```agda
+False : ∀ {Q} → Dec Q → Set
+False Q = T ⌊ ¬? Q ⌋
+
+toWitnessFalse : ∀ {A : Set} {D : Dec A} → False D  → ¬ A
+toWitnessFalse {A} {yes x} ()
+toWitnessFalse {A} {no ¬x} _ = ¬x
+
+fromWitnessFalse : ∀ {A : Set} {D : Dec A} → ¬ A → False D
+fromWitnessFalse {A} {yes x} y = exFalso (y x)
+fromWitnessFalse {A} {no ¬x} _  = tt
+```
+
+
 
 #### Exercise `Bin-decidable` (stretch)
 
@@ -648,6 +709,118 @@ Show that both of the above are decidable.
 
     One? : ∀ (b : Bin) → Dec (One b)
     Can? : ∀ (b : Bin) → Dec (Can b)
+    
+
+```agda
+data Bin : Set where
+  ⟨⟩ : Bin
+  _O : Bin → Bin
+  _I : Bin → Bin
+
+data One : Bin → Set where
+  leading : One (⟨⟩ I)
+  trailingO : ∀ {b : Bin}  → (One b) → One (b O)
+  trailingI : ∀ {b : Bin}  → (One b) → One (b I)
+  
+data Can : Bin → Set where
+  canZero : Can (⟨⟩ O)
+  canOne : ∀ {b : Bin}  → (One b) → Can b
+
+data notOneLong : Bin → Set where
+  cannotLeadingO : notOneLong (⟨⟩ O O)
+  cannotLeadingI : notOneLong (⟨⟩ O I)
+  trailingOn : ∀ {b : Bin}  → (notOneLong b) → notOneLong (b O)
+  trailingIn : ∀ {b : Bin}  → (notOneLong b) → notOneLong (b I)
+
+data notOne : Bin → Set where
+  notOneEmpty : notOne ⟨⟩
+  notOneZero : notOne (⟨⟩ O)
+  notALongOne : ∀ {b : Bin}  → (notOneLong b) → notOne b
+
+data Cannot : Bin → Set where
+  cannot⟨⟩ : Cannot ⟨⟩
+  cannotOne : ∀ {b : Bin} → (notOneLong b) → Cannot b
+  
+¬OneLongOne : ∀ {b : Bin} → notOneLong b → ¬ One b
+¬OneLongOne cannotLeadingO (trailingO (trailingO ()))
+¬OneLongOne cannotLeadingI (trailingI (trailingO ()))
+¬OneLongOne (trailingOn x) (trailingO y) = ¬OneLongOne x y
+¬OneLongOne (trailingIn x) (trailingI y) = ¬OneLongOne x y
+
+¬One : ∀ {b : Bin} → notOne b → ¬ One b
+¬One notOneZero (trailingO ())
+¬One (notALongOne x) y = ¬OneLongOne x y
+
+postulate
+   One¬ : ∀ {b : Bin} → ¬ One b → notOne b
+
+
+¬Can : ∀ {b : Bin} → Cannot b → ¬ Can b
+¬Can cannot⟨⟩ (canOne ())
+¬Can (cannotOne (trailingOn ())) canZero
+¬Can (cannotOne x) (canOne y) = ¬One (notALongOne x) y
+
+inc : Bin → Bin
+inc ⟨⟩ = ⟨⟩ I
+inc (b O) = b I
+inc (b I) = (inc b) O
+
+
+to   : ℕ → Bin
+to zero = ⟨⟩ O
+to (suc n) = inc (to n)
+
+from : Bin → ℕ
+from ⟨⟩ = 0
+from (b O) = 2 * from b
+from (b I) = suc (2 * from b)
+
+oneinc : ∀{b : Bin} →
+    One b →
+    ------------
+    One (inc b)
+oneinc leading = trailingO leading
+oneinc (trailingO o) = trailingI o
+oneinc (trailingI o) = trailingO (oneinc o)
+
+caninc : ∀{b : Bin} →
+    Can b →
+    ------------
+    Can (inc b)
+caninc canZero = canOne leading
+caninc (canOne x) = canOne (oneinc x)
+
+canto : ∀ {n : ℕ} → Can (to n)
+canto {zero} = canZero
+canto {suc n} = caninc (canto {n})
+```
+
+One? : ∀ (b : Bin) → Dec (One b)
+One? ⟨⟩ = no λ ()
+One? (b O) with One? b
+... | yes leading = yes (trailingO leading)
+... | yes (trailingO x) = yes (trailingO (trailingO x))
+... | yes (trailingI x) = yes (trailingO (trailingI x))
+... | no x = no (¬One {!!})
+One? (b I) = {!!}
+
+Can? : ∀ (b : Bin) → Dec (Can b)
+Can? ⟨⟩ = no (¬Can cannot⟨⟩ )
+Can? (⟨⟩ O) = yes canZero
+Can? (b I) with Can? b
+... | yes canZero = no {!!}
+... | yes (canOne x) = {!!}
+... | no x = {!!}
+Can? (b O O) with Can? b
+... | x = {!!}
+Can? (b I O) with Can? b
+... | x = {!!}
+
+
+-- ... | yes canZero = no (¬Can (cannotOne cannotLeadingO))
+-- ... | yes (canOne x) = yes (canOne (trailingO x))
+-- ... | no x = {!!}
+-- Can? (b I) = {!!}
 
 
 

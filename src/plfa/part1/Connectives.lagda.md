@@ -237,6 +237,12 @@ is isomorphic to `(A → B) × (B → A)`.
 
 ```agda
 -- Your code goes here
+
+⇔-biimp : ∀ {A B : Set} → (A ⇔ B) ≃ (A → B) × (B → A)
+⇔-biimp ._≃_.to x = ⟨ _⇔_.to x , _⇔_.from x ⟩
+⇔-biimp ._≃_.from = λ{ ⟨ x , y ⟩ ._⇔_.to → x ; ⟨ x , y ⟩ ._⇔_.from → y}
+⇔-biimp ._≃_.from∘to x = refl
+⇔-biimp ._≃_.to∘from =  η-×
 ```
 
 
@@ -454,6 +460,16 @@ Show sum is commutative up to isomorphism.
 
 ```agda
 -- Your code goes here
+
+⊎-comm : ∀ {A B : Set} → (A ⊎ B) ≃ (B ⊎ A)
+⊎-comm ._≃_.to (inj₁ x) = inj₂ x
+⊎-comm ._≃_.to (inj₂ y) = inj₁ y
+⊎-comm ._≃_.from (inj₁ x) = inj₂ x
+⊎-comm ._≃_.from (inj₂ y) = inj₁ y
+⊎-comm ._≃_.from∘to (inj₁ x) = refl
+⊎-comm ._≃_.from∘to (inj₂ y) = refl
+⊎-comm ._≃_.to∘from (inj₁ x) = refl
+⊎-comm ._≃_.to∘from (inj₂ y) = refl
 ```
 
 #### Exercise `⊎-assoc` (practice)
@@ -462,6 +478,19 @@ Show sum is associative up to isomorphism.
 
 ```agda
 -- Your code goes here
+⊎-assoc : ∀ {A B C : Set} → ((A ⊎ B) ⊎ C) ≃ (A ⊎ (B ⊎ C))
+⊎-assoc ._≃_.to (inj₁ (inj₁ a)) = inj₁ a
+⊎-assoc ._≃_.to (inj₁ (inj₂ b)) = inj₂ (inj₁ b)
+⊎-assoc ._≃_.to (inj₂ c) = inj₂ (inj₂ c)
+⊎-assoc ._≃_.from (inj₁ a) = inj₁ (inj₁ a)
+⊎-assoc ._≃_.from (inj₂ (inj₁ b)) = inj₁ (inj₂ b)
+⊎-assoc ._≃_.from (inj₂ (inj₂ c)) = inj₂ c
+⊎-assoc ._≃_.from∘to (inj₁ (inj₁ a)) = refl
+⊎-assoc ._≃_.from∘to (inj₁ (inj₂ b)) = refl
+⊎-assoc ._≃_.from∘to (inj₂ c) = refl
+⊎-assoc ._≃_.to∘from (inj₁ a) = refl
+⊎-assoc ._≃_.to∘from (inj₂ (inj₁ b)) = refl
+⊎-assoc ._≃_.to∘from (inj₂ (inj₂ c)) = refl
 ```
 
 ## False is empty
@@ -528,6 +557,11 @@ Show empty is the left identity of sums up to isomorphism.
 
 ```agda
 -- Your code goes here
+⊎-unitₗ : ∀ {A : Set} → A ≃ (⊥ ⊎ A)
+⊎-unitₗ ._≃_.to a = inj₂ a
+⊎-unitₗ ._≃_.from (inj₂ a) = a
+⊎-unitₗ ._≃_.from∘to x = refl
+⊎-unitₗ ._≃_.to∘from (inj₂ x) = refl
 ```
 
 #### Exercise `⊥-identityʳ` (practice)
@@ -536,6 +570,11 @@ Show empty is the right identity of sums up to isomorphism.
 
 ```agda
 -- Your code goes here
+⊎-unitᵣ : ∀ {A : Set} → A ≃ (A ⊎ ⊥)
+⊎-unitᵣ ._≃_.to a = inj₁ a
+⊎-unitᵣ ._≃_.from (inj₁ a) = a
+⊎-unitᵣ ._≃_.from∘to x = refl
+⊎-unitᵣ ._≃_.to∘from (inj₁ x) = refl
 ```
 
 ## Implication is function {#implication}
@@ -756,14 +795,17 @@ one of these laws is "more true" than the other.
 
 Show that the following property holds:
 ```agda
-postulate
-  ⊎-weak-× : ∀ {A B C : Set} → (A ⊎ B) × C → A ⊎ (B × C)
+⊎-weak-× : ∀ {A B C : Set} → (A ⊎ B) × C → A ⊎ (B × C)
+⊎-weak-× ⟨ inj₁ x , proj₄ ⟩ = inj₁ x
+⊎-weak-× ⟨ inj₂ x , proj₄ ⟩ = inj₂ ⟨ x , proj₄ ⟩
 ```
 This is called a _weak distributive law_. Give the corresponding
 distributive law, and explain how it relates to the weak version.
 
 ```agda
 -- Your code goes here
+⊎-distrib-×' : ∀ {A B C : Set} → (A ⊎ B) × C ≃ (A × C) ⊎ (B × C)
+⊎-distrib-×' = ×-distrib-⊎
 ```
 
 
@@ -771,13 +813,24 @@ distributive law, and explain how it relates to the weak version.
 
 Show that a disjunct of conjuncts implies a conjunct of disjuncts:
 ```agda
-postulate
-  ⊎×-implies-×⊎ : ∀ {A B C D : Set} → (A × B) ⊎ (C × D) → (A ⊎ C) × (B ⊎ D)
+⊎×-implies-×⊎ : ∀ {A B C D : Set} → (A × B) ⊎ (C × D) → (A ⊎ C) × (B ⊎ D)
+⊎×-implies-×⊎ (inj₁ ⟨ a , b ⟩) = ⟨ inj₁ a , inj₁ b ⟩
+⊎×-implies-×⊎ (inj₂ ⟨ c , d ⟩) = ⟨ inj₂ c , inj₂ d ⟩
 ```
 Does the converse hold? If so, prove; if not, give a counterexample.
 
 ```agda
 -- Your code goes here
+×⊎-notimplies-⊎× : (∀( A B C D : Set ) → (A ⊎ B) × (C ⊎ D) → (A × B) ⊎ (C × D) ) →  ⊥
+×⊎-notimplies-⊎× f with (f ⊤ ⊥ ⊥ ⊤ (⟨ inj₁ tt , inj₂ tt ⟩))
+... | inj₁ ()
+... | inj₂ ()
+
+×⊎-notimplies-⊎×₁ : ∀{ A D : Set } → (a : A) → (d : D) → (A ⊎ ⊥) × (⊥ ⊎ D)
+×⊎-notimplies-⊎×₁ a d = ⟨ inj₁ a , inj₂ d ⟩
+×⊎-notimplies-⊎×₂ : ∀{ A D : Set } → (A × ⊥) ⊎ (⊥ × D) → ⊥
+×⊎-notimplies-⊎×₂ (inj₁ ())
+×⊎-notimplies-⊎×₂ (inj₂ ())
 ```
 
 

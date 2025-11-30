@@ -437,8 +437,7 @@ open ≲-Reasoning
 
 Show that every isomorphism implies an embedding.
 ```agda
-postulate
-  ≃-implies-≲ : ∀ {A B : Set}
+≃-implies-≲ : ∀ {A B : Set}
     → A ≃ B
       -----
     → A ≲ B
@@ -446,6 +445,9 @@ postulate
 
 ```agda
 -- Your code goes here
+≃-implies-≲ A≃B .to =  A≃B .to
+≃-implies-≲ A≃B .from = A≃B .from
+≃-implies-≲ A≃B .from∘to = A≃B .from∘to
 ```
 
 #### Exercise `_⇔_` (practice) {#iff}
@@ -456,11 +458,28 @@ record _⇔_ (A B : Set) : Set where
   field
     to   : A → B
     from : B → A
+
+open _⇔_
 ```
 Show that equivalence is reflexive, symmetric, and transitive.
 
 ```agda
 -- Your code goes here
+⇔-refl : (A : Set) → A ⇔ A
+⇔-refl A ._⇔_.to = λ x → x
+⇔-refl A ._⇔_.from =  λ x → x
+
+⇔-symm : {A B : Set} → A ⇔ B → B ⇔ A
+⇔-symm A⇔B =
+  record
+  { to = from A⇔B
+  ; from = to A⇔B
+  }
+⇔-trans : {A B C : Set} → A ⇔ B → B ⇔ C → A ⇔ C
+⇔-trans A⇔B B⇔C = record
+  { to = to B⇔C ∘ to A⇔B
+  ; from = from  A⇔B ∘ from B⇔C
+  }
 ```
 
 #### Exercise `Bin-embedding` (stretch) {#Bin-embedding}
@@ -481,6 +500,22 @@ which satisfy the following property:
 Using the above, establish that there is an embedding of `ℕ` into `Bin`.
 ```agda
 -- Your code goes here
+data Bin : Set where
+  ⟨⟩ : Bin
+  _O : Bin → Bin
+  _I : Bin → Bin
+
+
+postulate
+   to-Bin : ℕ →  Bin
+   from-Bin :  Bin →  ℕ
+   from-to-Bin : ∀{n : ℕ} →  from-Bin (to-Bin n) ≡ n
+
+ℕintoBin : ℕ ≲ Bin
+ℕintoBin .to = to-Bin
+ℕintoBin .from = from-Bin
+ℕintoBin .from∘to x = from-to-Bin {x}
+
 ```
 
 Why do `to` and `from` not form an isomorphism?
